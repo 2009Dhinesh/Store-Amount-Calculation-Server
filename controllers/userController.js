@@ -88,9 +88,12 @@ const forgotPassword = async (req, res) => {
       text: `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`,
     };
 
+    console.log(`Attempting to send OTP to: ${user.email}`);
     await transporter.sendMail(mailOptions);
+    console.log(`OTP successfully sent to: ${user.email}`);
     res.json({ message: 'OTP sent to your email' });
   } catch (error) {
+    console.error('Email Sending Error:', error);
     res.status(500).json({ message: error.message });
   }
 };
