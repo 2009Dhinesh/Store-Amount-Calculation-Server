@@ -90,22 +90,15 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Final Attempt: Robust SSL config with explicit host and long timeouts
+    // Switching to Brevo SMTP for better reliability on Render
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // true for 465, false for other ports
-      pool: true,
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      secure: false, // Port 587 uses STARTTLS
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      tls: {
-       rejectUnauthorized: false // Bypass certificate check for better compatibility
-      },
-      connectionTimeout: 60000, 
-      greetingTimeout: 60000,
-      socketTimeout: 60000,
     });
 
     const mailOptions = {
