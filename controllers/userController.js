@@ -90,15 +90,17 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Reverting to Nodemailer but using Port 2525 (Alternative SMTP port that Render doesn't block)
+    // Use Port 2525 - The industry standard for bypassing SMTP blocks on Cloud platforms (Render/Heroku/Vercel)
     const transporter = nodemailer.createTransport({
       host: 'smtp-relay.brevo.com',
-      port: 2525, 
-      secure: false, 
+      port: 2525,
+      secure: false, // STARTTLS
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      connectionTimeout: 20000, // 20 seconds
+      socketTimeout: 30000,
     });
 
     const mailOptions = {
@@ -109,26 +111,29 @@ const forgotPassword = async (req, res) => {
       html: `<h3>Store Budget Password Reset</h3><p>Your OTP is: <b>${otp}</b></p><p>It is valid for 10 minutes.</p>`
     };
 
-    console.log(`Attempting to send OTP via Port 2525 to: ${user.email}`);
+    console.log(`[Email Debug] Target: ${user.email} | Using Host: smtp-relay.brevo.com | Port: 2525`);
     await transporter.sendMail(mailOptions);
-    console.log(`OTP successfully sent to: ${user.email}`);
+    console.log(`[Email Debug] OTP successfully sent to: ${user.email}`);
     res.json({ message: 'OTP sent to your email' });
   } catch (error) {
-    console.error('Full Email Error Object:', error);
+    console.error('[Email Logic Error]:', error);
     
     let userMessage = `Email Sending Failed (${error.code || 'UNKNOWN'})`;
-    if (error.code === 'EAUTH') {
-      userMessage = 'Email Auth Failed: Your SMTP_PASS (Brevo Key) is incorrect.';
-    } else if (error.code === 'ETIMEDOUT') {
-      userMessage = 'Connection Timeout: The email server is taking too long to respond on Port 2525.';
+    
+    // Categorize errors specifically for the User/Render
+    if (error.code === 'EAUTH' || error.responseCode === 535) {
+      userMessage = 'Email Auth Failed: Your SMTP_PASS (Brevo API/SMTP Key) is incorrect on Render.';
+    } else if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+      userMessage = 'Network Timeout: Brevo server is slow. Please try again.';
     } else if (error.code === 'ESOCKET' || error.syscall === 'connect') {
-      userMessage = `Network Error: Backend could not connect to Brevo on Port 2525 (${error.syscall || 'connect'}).`;
+      userMessage = `Network Blocked: Render cannot connect to Brevo on Port 2525 (${error.syscall || 'connect'}).`;
     }
 
     res.status(500).json({ 
       message: userMessage,
       error: error.message,
-      code: error.code
+      code: error.code,
+      details: 'Check Render Environment Variables: SMTP_USER, SMTP_PASS, SENDER_EMAIL'
     });
   }
 };
