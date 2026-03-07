@@ -96,13 +96,13 @@ const forgotPassword = async (req, res) => {
       port: 587,
       secure: false, // Port 587 uses STARTTLS
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
     });
 
     const mailOptions = {
-      from: `"Store Budget" <${process.env.EMAIL_USER}>`,
+      from: `"Store Budget" <${process.env.SENDER_EMAIL}>`,
       to: user.email,
       subject: 'Store Budget - Password Reset OTP',
       text: `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`,
