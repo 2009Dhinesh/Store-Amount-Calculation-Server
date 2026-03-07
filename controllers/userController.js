@@ -104,11 +104,35 @@ const forgotPassword = async (req, res) => {
     });
 
     const mailOptions = {
-      from: `"Store Budget" <${process.env.SENDER_EMAIL}>`,
+      from: `"Store Budget Support" <${process.env.SENDER_EMAIL}>`,
       to: user.email,
       subject: 'Store Budget - Password Reset OTP',
-      text: `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`,
-      html: `<h3>Store Budget Password Reset</h3><p>Your OTP is: <b>${otp}</b></p><p>It is valid for 10 minutes.</p>`
+      text: `Your Store Budget OTP is: ${otp}. It is valid for 10 minutes. If you did not request this, please ignore this email.`,
+      html: `
+        <div style="font-family: 'Inter', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 16px; background-color: #ffffff;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #007AFF; font-size: 28px; font-weight: 800; margin: 0;">Store Budget</h2>
+            <p style="color: #666666; font-size: 14px; margin-top: 8px;">Your Finances, Simplified</p>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 30px; border-radius: 12px; text-align: center;">
+            <p style="color: #333333; font-size: 16px; margin-bottom: 20px;">We received a request to reset your password. Use the following code to continue:</p>
+            
+            <div style="display: inline-block; padding: 16px 32px; background-color: #007AFF; border-radius: 8px; font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: 4px;">
+              ${otp}
+            </div>
+            
+            <p style="color: #888888; font-size: 13px; margin-top: 25px;">This OTP is valid for <b>10 minutes</b>.</p>
+          </div>
+          
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eeeeee; text-align: center;">
+            <p style="color: #999999; font-size: 12px; line-height: 1.5;">
+              If you didn't request this code, you can safely ignore this email. Another user might have entered your email address by mistake.
+            </p>
+            <p style="color: #999999; font-size: 12px; margin-top: 20px; font-weight: 600;">© 2026 Store Budget Team</p>
+          </div>
+        </div>
+      `
     };
 
     console.log(`[Email Debug] Target: ${user.email} | Using Host: smtp-relay.brevo.com | Port: 2525`);
