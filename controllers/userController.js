@@ -90,50 +90,36 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Switching to Brevo SMTP for better reliability on Render
-    const transporter = nodemailer.createTransport({
-      host: 'smtp-relay.brevo.com',
-      port: 587,
-      secure: false, // Port 587 uses STARTTLS
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      connectionTimeout: 20000, // 20 seconds
-      socketTimeout: 30000,
-    });
-
-    const mailOptions = {
-      from: `"Store Budget" <${process.env.SENDER_EMAIL}>`,
-      to: user.email,
-      subject: 'Store Budget - Password Reset OTP',
-      text: `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`,
-      html: `<h3>Store Budget Password Reset</h3><p>Your OTP is: <b>${otp}</b></p><p>It is valid for 10 minutes.</p>`
-    };
-
-    console.log(`Attempting to send OTP to: ${user.email}`);
-    await transporter.sendMail(mailOptions);
-    console.log(`OTP successfully sent to: ${user.email}`);
-    res.json({ message: 'OTP sent to your email' });
-  } catch (error) {
-    console.error('Full Email Error Object:', error);
-    
-    let userMessage = `Email Sending Failed (${error.code || 'UNKNOWN'})`;
-    if (error.code === 'EAUTH') {
-      userMessage = 'Email Auth Failed: Your SMTP Credentials (Login/Pass) are incorrect.';
-    } else if (error.code === 'ETIMEDOUT') {
-      userMessage = 'Connection Timeout: The email server is taking too long to respond. Please check your SMTP settings.';
-    } else if (error.code === 'ESOCKET' || error.syscall === 'connect') {
-      userMessage = `Network Error: Backend could not connect to Email servers (${error.syscall || 'connect'}).`;
-    } else if (error.message && error.message.includes('Invalid login')) {
-      userMessage = 'Email Login Failed: Please check your SMTP_USER and SMTP_PASS.';
+    // Use Brevo HTTP API for maximum reliability on Cloud platforms (Bypasses SMTP port blocking)
+    try {
+      const axios = require('axios');
+      const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+        sender: { name: "Store Budget", email: process.env.SENDER_EMAIL },
+        to: [{ email: user.email }],
+        subject: "Store Budget - Password Reset OTP",
+        htmlContent: `<h3>Store Budget Password Reset</h3><p>Your OTP is: <b>${otp}</b></p><p>It is valid for 10 minutes.</p>`
+      }, {
+        headers: {
+          'api-key': process.env.SMTP_PASS,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log('Brevo API Success:', response.data);
+      res.json({ message: 'OTP sent to your email' });
+    } catch (apiError) {
+      console.error('Brevo API Error:', apiError.response ? apiError.response.data : apiError.message);
+      
+      let errorDetail = apiError.response ? apiError.response.data.message : apiError.message;
+      res.status(500).json({ 
+        message: `Email API Error: ${errorDetail}`,
+        code: 'BREVO_API_ERROR'
+      });
     }
-
-    res.status(500).json({ 
-      message: userMessage,
-      error: error.message,
-      code: error.code
-    });
+  } catch (error) {
+    console.error('General Error in forgotPassword:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 };
 
