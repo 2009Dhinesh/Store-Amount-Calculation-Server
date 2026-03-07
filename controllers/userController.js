@@ -118,13 +118,13 @@ const forgotPassword = async (req, res) => {
     
     let userMessage = `Email Sending Failed (${error.code || 'UNKNOWN'})`;
     if (error.code === 'EAUTH') {
-      userMessage = 'Gmail Auth Failed: Your EMAIL_PASS (App Password) is incorrect or Gmail blocked it.';
+      userMessage = 'Email Auth Failed: Your SMTP Credentials (Login/Pass) are incorrect.';
     } else if (error.code === 'ETIMEDOUT') {
-      userMessage = 'Connection Timeout: Gmail servers are taking too long to respond.';
+      userMessage = 'Connection Timeout: The email server is taking too long to respond. Please check your SMTP settings.';
     } else if (error.code === 'ESOCKET' || error.syscall === 'connect') {
-      userMessage = `Network Error: Backend could not connect to Gmail servers (${error.syscall || 'connect'}).`;
+      userMessage = `Network Error: Backend could not connect to Email servers (${error.syscall || 'connect'}).`;
     } else if (error.message && error.message.includes('Invalid login')) {
-      userMessage = 'Gmail Login Failed: Please check your EMAIL_USER and App Password.';
+      userMessage = 'Email Login Failed: Please check your SMTP_USER and SMTP_PASS.';
     }
 
     res.status(500).json({ 
