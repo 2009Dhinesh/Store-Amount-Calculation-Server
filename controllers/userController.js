@@ -63,14 +63,32 @@ const loginUser = async (req, res) => {
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
+    console.log(`Starting OTP flow for email: ${email}`);
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      console.log(`User not found: ${email}`);
+      return res.status(404).json({ message: 'No account found with this email' });
+    }
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.resetPasswordOtp = otp;
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
-    await user.save();
+    
+    try {
+      await user.save();
+      console.log('OTP saved to database');
+    } catch (saveError) {
+      console.error('Database Save Error:', saveError);
+      return res.status(500).json({ message: 'Database Error: Could not save OTP' });
+    }
+
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error('Missing Email Environment Variables!');
+      return res.status(500).json({ 
+        message: 'Backend Configuration Error: EMAIL_USER or EMAIL_PASS not found in Render Environment Variables.' 
+      });
+    }
 
     // Send email
     const transporter = nodemailer.createTransport({
@@ -82,10 +100,11 @@ const forgotPassword = async (req, res) => {
     });
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"Store Budget" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: 'Store Budget - Password Reset OTP',
       text: `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`,
+      html: `<h3>Store Budget Password Reset</h3><p>Your OTP is: <b>${otp}</b></p><p>It is valid for 10 minutes.</p>`
     };
 
     console.log(`Attempting to send OTP to: ${user.email}`);
@@ -93,15 +112,20 @@ const forgotPassword = async (req, res) => {
     console.log(`OTP successfully sent to: ${user.email}`);
     res.json({ message: 'OTP sent to your email' });
   } catch (error) {
-    console.error('Email Sending Error:', error);
-    // If it's a credential error, provide a clearer message
-    if (error.code === 'EAUTH' || !process.env.EMAIL_USER) {
-      return res.status(500).json({ 
-        message: 'Backend Email Error: Missing or incorrect EMAIL_USER/EMAIL_PASS on Render. Please check Render dashboard settings.',
-        error: error.message 
-      });
+    console.error('Full Email Error Object:', error);
+    
+    let userMessage = 'Email Sending Failed';
+    if (error.code === 'EAUTH') {
+      userMessage = 'Gmail Auth Failed: Your EMAIL_PASS (App Password) is incorrect or Gmail blocked it.';
+    } else if (error.code === 'ESOCKET' || error.syscall === 'connect') {
+      userMessage = 'Network Error: Backend could not connect to Gmail servers.';
     }
-    res.status(500).json({ message: 'Server Error: ' + error.message });
+
+    res.status(500).json({ 
+      message: userMessage,
+      error: error.message,
+      code: error.code
+    });
   }
 };
 
