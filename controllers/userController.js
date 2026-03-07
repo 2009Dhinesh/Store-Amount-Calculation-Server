@@ -90,19 +90,22 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Adding pooling and longer timeouts specifically for Render Free tier stability
+    // Final Attempt: Robust SSL config with explicit host and long timeouts
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      pool: true, // Use pooling to keep connection alive
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // true for 465, false for other ports
+      pool: true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      connectionTimeout: 30000, // 30 seconds
-      greetingTimeout: 30000,
-      socketTimeout: 60000, // 60 seconds
-      debug: false,
-      logger: false,
+      tls: {
+       rejectUnauthorized: false // Bypass certificate check for better compatibility
+      },
+      connectionTimeout: 60000, 
+      greetingTimeout: 60000,
+      socketTimeout: 60000,
     });
 
     const mailOptions = {
