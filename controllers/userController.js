@@ -90,36 +90,46 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Use Brevo HTTP API for maximum reliability on Cloud platforms (Bypasses SMTP port blocking)
-    try {
-      const axios = require('axios');
-      const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
-        sender: { name: "Store Budget", email: process.env.SENDER_EMAIL },
-        to: [{ email: user.email }],
-        subject: "Store Budget - Password Reset OTP",
-        htmlContent: `<h3>Store Budget Password Reset</h3><p>Your OTP is: <b>${otp}</b></p><p>It is valid for 10 minutes.</p>`
-      }, {
-        headers: {
-          'api-key': process.env.SMTP_PASS,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-      
-      console.log('Brevo API Success:', response.data);
-      res.json({ message: 'OTP sent to your email' });
-    } catch (apiError) {
-      console.error('Brevo API Error:', apiError.response ? apiError.response.data : apiError.message);
-      
-      let errorDetail = apiError.response ? apiError.response.data.message : apiError.message;
-      res.status(500).json({ 
-        message: `Email API Error: ${errorDetail}`,
-        code: 'BREVO_API_ERROR'
-      });
-    }
+    // Reverting to Nodemailer but using Port 2525 (Alternative SMTP port that Render doesn't block)
+    const transporter = nodemailer.createTransport({
+      host: 'smtp-relay.brevo.com',
+      port: 2525, 
+      secure: false, 
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: `"Store Budget" <${process.env.SENDER_EMAIL}>`,
+      to: user.email,
+      subject: 'Store Budget - Password Reset OTP',
+      text: `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`,
+      html: `<h3>Store Budget Password Reset</h3><p>Your OTP is: <b>${otp}</b></p><p>It is valid for 10 minutes.</p>`
+    };
+
+    console.log(`Attempting to send OTP via Port 2525 to: ${user.email}`);
+    await transporter.sendMail(mailOptions);
+    console.log(`OTP successfully sent to: ${user.email}`);
+    res.json({ message: 'OTP sent to your email' });
   } catch (error) {
-    console.error('General Error in forgotPassword:', error);
-    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    console.error('Full Email Error Object:', error);
+    
+    let userMessage = `Email Sending Failed (${error.code || 'UNKNOWN'})`;
+    if (error.code === 'EAUTH') {
+      userMessage = 'Email Auth Failed: Your SMTP_PASS (Brevo Key) is incorrect.';
+    } else if (error.code === 'ETIMEDOUT') {
+      userMessage = 'Connection Timeout: The email server is taking too long to respond on Port 2525.';
+    } else if (error.code === 'ESOCKET' || error.syscall === 'connect') {
+      userMessage = `Network Error: Backend could not connect to Brevo on Port 2525 (${error.syscall || 'connect'}).`;
+    }
+
+    res.status(500).json({ 
+      message: userMessage,
+      error: error.message,
+      code: error.code
+    });
   }
 };
 
