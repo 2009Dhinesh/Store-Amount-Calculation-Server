@@ -90,9 +90,11 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Send email
+    // Send email using explicit SMTP settings for better cloud compatibility
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // use SSL
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -114,11 +116,13 @@ const forgotPassword = async (req, res) => {
   } catch (error) {
     console.error('Full Email Error Object:', error);
     
-    let userMessage = 'Email Sending Failed';
+    let userMessage = `Email Sending Failed (${error.code || 'UNKNOWN'})`;
     if (error.code === 'EAUTH') {
       userMessage = 'Gmail Auth Failed: Your EMAIL_PASS (App Password) is incorrect or Gmail blocked it.';
     } else if (error.code === 'ESOCKET' || error.syscall === 'connect') {
       userMessage = 'Network Error: Backend could not connect to Gmail servers.';
+    } else if (error.message && error.message.includes('Invalid login')) {
+      userMessage = 'Gmail Login Failed: Please check your EMAIL_USER and App Password.';
     }
 
     res.status(500).json({ 
