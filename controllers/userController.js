@@ -90,15 +90,16 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Send email using port 587 (STARTTLS) - often better for cloud providers like Render
+    // Reverting to 'service: gmail' but with added timeouts to prevent 502/timeouts on Render
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // use STARTTLS
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,
+      socketTimeout: 20000,
     });
 
     const mailOptions = {
@@ -119,8 +120,10 @@ const forgotPassword = async (req, res) => {
     let userMessage = `Email Sending Failed (${error.code || 'UNKNOWN'})`;
     if (error.code === 'EAUTH') {
       userMessage = 'Gmail Auth Failed: Your EMAIL_PASS (App Password) is incorrect or Gmail blocked it.';
+    } else if (error.code === 'ETIMEDOUT') {
+      userMessage = 'Connection Timeout: Gmail servers are taking too long to respond.';
     } else if (error.code === 'ESOCKET' || error.syscall === 'connect') {
-      userMessage = `Network Error: Backend could not connect to Gmail servers on Port 587 (${error.syscall || 'connect'}).`;
+      userMessage = `Network Error: Backend could not connect to Gmail servers (${error.syscall || 'connect'}).`;
     } else if (error.message && error.message.includes('Invalid login')) {
       userMessage = 'Gmail Login Failed: Please check your EMAIL_USER and App Password.';
     }
