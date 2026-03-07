@@ -83,10 +83,10 @@ const forgotPassword = async (req, res) => {
       return res.status(500).json({ message: 'Database Error: Could not save OTP' });
     }
 
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.error('Missing Email Environment Variables!');
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('Missing SMTP Environment Variables!');
       return res.status(500).json({ 
-        message: 'Backend Configuration Error: EMAIL_USER or EMAIL_PASS not found in Render Environment Variables.' 
+        message: 'Backend Configuration Error: SMTP_USER or SMTP_PASS not found in Render Environment Variables.' 
       });
     }
 
