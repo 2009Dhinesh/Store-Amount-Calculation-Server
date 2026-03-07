@@ -94,7 +94,14 @@ const forgotPassword = async (req, res) => {
     res.json({ message: 'OTP sent to your email' });
   } catch (error) {
     console.error('Email Sending Error:', error);
-    res.status(500).json({ message: error.message });
+    // If it's a credential error, provide a clearer message
+    if (error.code === 'EAUTH' || !process.env.EMAIL_USER) {
+      return res.status(500).json({ 
+        message: 'Backend Email Error: Missing or incorrect EMAIL_USER/EMAIL_PASS on Render. Please check Render dashboard settings.',
+        error: error.message 
+      });
+    }
+    res.status(500).json({ message: 'Server Error: ' + error.message });
   }
 };
 
