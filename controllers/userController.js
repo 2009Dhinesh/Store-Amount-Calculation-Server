@@ -90,16 +90,19 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Reverting to 'service: gmail' but with added timeouts to prevent 502/timeouts on Render
+    // Adding pooling and longer timeouts specifically for Render Free tier stability
     const transporter = nodemailer.createTransport({
       service: 'gmail',
+      pool: true, // Use pooling to keep connection alive
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,
-      socketTimeout: 20000,
+      connectionTimeout: 30000, // 30 seconds
+      greetingTimeout: 30000,
+      socketTimeout: 60000, // 60 seconds
+      debug: false,
+      logger: false,
     });
 
     const mailOptions = {
