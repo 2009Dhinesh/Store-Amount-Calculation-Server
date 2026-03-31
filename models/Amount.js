@@ -32,9 +32,14 @@ const amountSchema = new mongoose.Schema({
   }],
   memberShares: [{
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    amount: { type: Number }
+    amount: { type: Number },
+    isSettled: { type: Boolean, default: false }
   }],
   isPaid: {
+    type: Boolean,
+    default: false,
+  },
+  isSettled: {
     type: Boolean,
     default: false,
   },

@@ -35,6 +35,21 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordExpires: {
     type: Date,
+  },
+  monthlyLimit: {
+    type: Number,
+    default: 0,
+  },
+  notificationsEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  notificationThreshold: {
+    type: Number,
+    default: 80,
+  },
+  expoPushToken: {
+    type: String,
   }
 }, { timestamps: true });
 

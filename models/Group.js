@@ -17,6 +17,14 @@ const groupSchema = new mongoose.Schema({
   totalAmount: {
     type: Number,
     default: 0,
+  },
+  monthlyLimit: {
+    type: Number,
+    default: 0,
+  },
+  notificationThreshold: {
+    type: Number,
+    default: 80,
   }
 }, { timestamps: true });
 

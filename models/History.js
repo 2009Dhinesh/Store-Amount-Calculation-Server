@@ -13,7 +13,7 @@ const historySchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['ADD', 'DELETE'],
+    enum: ['ADD', 'DELETE', 'SETTLE'],
     required: true,
   },
   amount: {

@@ -206,6 +206,32 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+const updateUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (req.body.name) user.name = req.body.name;
+    if (req.body.monthlyLimit !== undefined) user.monthlyLimit = req.body.monthlyLimit;
+    if (req.body.notificationsEnabled !== undefined) user.notificationsEnabled = req.body.notificationsEnabled;
+    if (req.body.notificationThreshold !== undefined) user.notificationThreshold = req.body.notificationThreshold;
+    if (req.body.expoPushToken !== undefined) user.expoPushToken = req.body.expoPushToken;
+
+    const updatedUser = await user.save();
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      monthlyLimit: updatedUser.monthlyLimit,
+      notificationsEnabled: updatedUser.notificationsEnabled,
+      notificationThreshold: updatedUser.notificationThreshold,
+      expoPushToken: updatedUser.expoPushToken,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({}).select('-password').lean();
@@ -215,4 +241,26 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-module.exports = { signupUser, loginUser, getUserProfile, getAllUsers, forgotPassword, resetPassword };
+const getUserDetails = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password').lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const Group = require('../models/Group');
+    const groups = await Group.find({
+      $or: [
+        { groupLeader: user._id },
+        { members: user._id }
+      ]
+    }).select('name totalAmount').lean();
+
+    res.json({
+      ...user,
+      groups
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { signupUser, loginUser, getUserProfile, getAllUsers, forgotPassword, resetPassword, updateUserProfile, getUserDetails };
